@@ -1,0 +1,227 @@
+import tkinter as tk
+from tkinter import messagebox
+import random
+
+# Initialize score and question counter
+score = 0
+questions_answered = 0
+
+# Function to create the main game window
+def create_game_window():
+    global game_window, score, questions_answered
+    score = 0  # Reset score when a new game starts
+    questions_answered = 0  # Reset question counter
+    game_window = tk.Toplevel(root)
+    game_window.title("Math Game")
+    game_window.geometry("400x300")  # Set window size
+    game_window.configure(bg='yellow')  # Set background colour to yellow
+
+    tk.Label(game_window, text="Select Difficulty Level:", font=('Calibri', 12, 'bold'), bg='yellow').pack(pady=20)
+
+    # Buttons for selecting difficulty levels
+    tk.Button(game_window, text="Easy", command=lambda: start_game("easy"), font=('Calibri', 12, 'bold')).pack(pady=10)
+    tk.Button(game_window, text="Medium", command=lambda: start_game("medium"), font=('Calibri', 12, 'bold')).pack(pady=10)
+    tk.Button(game_window, text="Hard", command=lambda: start_game("hard"), font=('Calibri', 12, 'bold')).pack(pady=10)
+
+# Function to start the game based on the selected difficulty level
+def start_game(level):
+    game_window.destroy()
+    ask_question(level)
+
+# Function to generate and ask a math question based on the difficulty level
+def ask_question(level):
+    global score_label, questions_answered
+
+    if level == "easy":
+        num1 = random.randint(1, 10)
+        num2 = random.randint(1, 10)
+        operation = random.choice(["+", "-"])
+    elif level == "medium":
+        num1 = random.randint(1, 20)
+        num2 = random.randint(1, 20)
+        operation = random.choice(["+", "-", "*", "/"])
+    else:  # hard level
+        num1 = random.randint(1, 100)
+        num2 = random.randint(1, 100)
+        operation = random.choice(["*", "/"])
+
+    if operation == "/":
+        num1 = num1 * num2  # Ensure num1 is divisible by num2
+        question = f"{num1} / {num2} = ?"
+        correct_answer = num1 / num2
+    elif operation == "*":
+        question = f"{num1} * {num2} = ?"
+        correct_answer = num1 * num2
+    elif operation == "+":
+        question = f"{num1} + {num2} = ?"
+        correct_answer = num1 + num2
+    else:  # "-"
+        question = f"{num1} - {num2} = ?"
+        correct_answer = num1 - num2
+
+    # Create a new window for the question
+    question_window = tk.Toplevel(root)
+    question_window.title("Math Question")
+    question_window.geometry("400x300")  # Set window size
+    question_window.configure(bg='yellow')  # Set background colour to yellow
+
+    tk.Label(question_window, text=question, font=('Calibri', 12, 'bold'), bg='yellow').pack(pady=20)
+    answer_entry = tk.Entry(question_window, font=('Calibri', 12, 'bold'))
+    answer_entry.pack(pady=10)
+
+    # Label to display the current score in the bottom left
+    score_label = tk.Label(question_window, text=f"Score: {score}", font=('Calibri', 12, 'bold'), bg='yellow')
+    score_label.pack(side=tk.LEFT, anchor='sw', padx=10, pady=10)
+
+    def update_score():
+        score_label.config(text=f"Score: {score}")
+
+    def check_answer():
+        global score, questions_answered
+        try:
+            user_answer = float(answer_entry.get())
+            if abs(user_answer - correct_answer) < 1e-5:
+                score += 10
+                messagebox.showinfo("Result", "Good job, that is right!")
+                if score >= 100:
+                    win_game(level)
+            else:
+                score -= 10
+                messagebox.showinfo("Result", f"That is incorrect. The correct answer is {correct_answer}.")
+                if score <= -100:
+                    lose_game(level)
+                else:
+                    change_difficulty(level)
+            questions_answered += 1
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a valid number.")
+            return
+
+        # Update the score displayed
+        update_score()
+
+        # Disable the submit button after answering
+        submit_button.config(state=tk.DISABLED)
+        end_game_button.config(state=tk.NORMAL)
+        another_question_button.config(state=tk.NORMAL)
+
+    def win_game(level):
+        question_window.destroy()
+        win_message = "You win! Your final score is 100."
+        if level != "hard":
+            win_message += "\nDo you want to try a harder difficulty?"
+            if messagebox.askyesno("Victory!", win_message):
+                if level == "easy":
+                    start_game("medium")
+                elif level == "medium":
+                    start_game("hard")
+            else:
+                ask_to_play_again()
+        else:
+            messagebox.showinfo("Victory!", win_message)
+            ask_to_play_again()
+
+    def lose_game(level):
+        question_window.destroy()
+        lose_message = "You lose! Your score is -100."
+        if level != "easy":
+            lose_message += "\nDo you want to switch to an easier difficulty?"
+            if messagebox.askyesno("Game Over", lose_message):
+                if level == "hard":
+                    start_game("medium")
+                elif level == "medium":
+                    start_game("easy")
+            else:
+                ask_to_play_again()
+        else:
+            messagebox.showinfo("Game Over", lose_message)
+            ask_to_play_again()
+
+    def change_difficulty(level):
+        question_window.destroy()
+        if level == "easy":
+            ask_question(level)
+        else:
+            if messagebox.askyesno("Change Difficulty", "Do you want to switch to an easier difficulty?"):
+                if level == "hard":
+                    start_game("medium")
+                elif level == "medium":
+                    start_game("easy")
+            else:
+                ask_question(level)
+
+    def ask_to_play_again():
+        global score, questions_answered
+        if messagebox.askyesno("Play Again", "Do you want to play again?"):
+            score = 0  # Reset score when playing again
+            questions_answered = 0  # Reset question counter
+            create_game_window()
+        else:
+            root.destroy()
+
+    def end_game():
+        question_window.destroy()
+        show_receipt(level)
+
+    def another_question():
+        question_window.destroy()
+        ask_question(level)
+
+    # Create a frame to hold the buttons and centre them
+    button_frame = tk.Frame(question_window, bg='yellow')
+    button_frame.pack(pady=10)
+
+    # Create end game and another question buttons
+    submit_button = tk.Button(button_frame, text="Submit", command=check_answer, font=('Calibri', 12, 'bold'))
+    submit_button.pack(side=tk.LEFT, padx=5)
+
+    end_game_button = tk.Button(button_frame, text="End Game", command=end_game, state=tk.DISABLED, font=('Calibri', 12, 'bold'))
+    end_game_button.pack(side=tk.LEFT, padx=5)
+
+    another_question_button = tk.Button(button_frame, text="Another Question", command=another_question, state=tk.DISABLED, font=('Calibri', 12, 'bold'))
+    another_question_button.pack(side=tk.LEFT, padx=5)
+
+# Function to show a receipt when the game ends
+def show_receipt(level):
+    receipt_message = (
+        f"Game Summary:\n\n"
+        f"Difficulty Level: {level.capitalize()}\n"
+        f"Final Score: {score}\n"
+        f"Total Questions Answered: {questions_answered}\n\n"
+        "Thank you for playing!"
+    )
+    messagebox.showinfo("Game Summary", receipt_message)
+    ask_to_play_again()
+
+# Function to validate login credentials
+def validate_login():
+    username = username_entry.get()
+    password = password_entry.get()
+    if username == "user1234" and password == "password":
+        root.withdraw()  # Hide the main root window
+        create_game_window()
+    else:
+        messagebox.showerror("Error", "Incorrect username or password.")
+
+# Create the main window
+root = tk.Tk()
+root.title("Math Game Login")
+root.geometry("400x200")  # Set window size
+root.configure(bg='yellow')  # Set background colour to yellow
+
+# Create the login window
+login_window = tk.Frame(root, bg='yellow')
+login_window.pack(pady=20)
+
+tk.Label(login_window, text="Username:", font=('Calibri', 12, 'bold'), bg='yellow').grid(row=0, column=0, pady=10)
+username_entry = tk.Entry(login_window, font=('Calibri', 12, 'bold'))
+username_entry.grid(row=0, column=1, pady=10)
+
+tk.Label(login_window, text="Password:", font=('Calibri', 12, 'bold'), bg='yellow').grid(row=1, column=0, pady=10)
+password_entry = tk.Entry(login_window, show="*", font=('Calibri', 12, 'bold'))
+password_entry.grid(row=1, column=1, pady=10)
+
+tk.Button(login_window, text="Login", command=validate_login, font=('Calibri', 12, 'bold')).grid(row=2, columnspan=2, pady=20)
+
+# Run the main loop
+root.mainloop()
